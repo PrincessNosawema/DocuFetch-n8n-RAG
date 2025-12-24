@@ -1,0 +1,551 @@
+{
+  "name": "DocuFetch Company RAG Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1xRKxUREFxQKuQ49r9YcUp563NRmd5lWI",
+          "mode": "list",
+          "cachedResultName": "Office Docs",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1xRKxUREFxQKuQ49r9YcUp563NRmd5lWI"
+        },
+        "event": "fileCreated",
+        "options": {
+          "fileType": "all"
+        }
+      },
+      "id": "df9c870e-a156-4357-a678-75eb77d5182e",
+      "name": "Google Drive Trigger",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1952,
+        320
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ewqENd6MYz8TNWqh",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.id }}",
+        "options": {}
+      },
+      "id": "958944ea-60a2-45a4-b714-68bd37a6b003",
+      "name": "Download File",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1712,
+        320
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ewqENd6MYz8TNWqh",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "documentknowledge",
+          "mode": "list",
+          "cachedResultName": "documentknowledge"
+        },
+        "options": {}
+      },
+      "id": "7d528d74-1776-443d-a258-33cce43cef3a",
+      "name": "Pinecone Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1,
+      "position": [
+        -1296,
+        192
+      ],
+      "credentials": {
+        "pineconeApi": {
+          "id": "lGQA1BNc4hxJIive",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-embedding-001"
+      },
+      "id": "4b65e68e-5bbe-4633-9456-7b44ea0725e5",
+      "name": "Embeddings Google Gemini",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1456,
+        480
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ieAt1Nldw4ak40Vd",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -1184,
+        496
+      ],
+      "id": "f6f6c89e-cfe1-4865-882f-76ba9a0b8612",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "chunkOverlap": 220,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        -1184,
+        736
+      ],
+      "id": "b4b57f5a-f10e-462c-8a0b-1e419b95ea87",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "trigger": [
+          "message"
+        ],
+        "channelId": {
+          "__rl": true,
+          "value": "C0A0HE7HQEM",
+          "mode": "list",
+          "cachedResultName": "random"
+        },
+        "options": {}
+      },
+      "id": "8e5f4805-f554-4998-98af-bc7c4725147f",
+      "name": "Slack Trigger",
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        416
+      ],
+      "webhookId": "e1ccf022-b096-403c-8807-ecb582ae97e8",
+      "credentials": {
+        "slackApi": {
+          "id": "3OyTcHGuU9nCHZYu",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a knowledgeable assistant for Princess Osas Limited, here to help employees and stakeholders find accurate information about the company.\n\nYOUR ROLE\n\nYou provide reliable answers drawn from the company’s knowledge base. Think of yourself as a helpful colleague who knows where to find the right information and presents it clearly.\n\nHOW YOU OPERATE\n\nBefore responding to any question:\n\t1.\tPause and consider what information would best address the user’s need\n\t2.\tSearch the knowledge base using the vector_store_retriever tool\n\t3.\tEvaluate whether the retrieved information actually answers the question\n\t4.\tFormulate a natural, conversational response\n\nWhen answering:\n\t1.\tSpeak naturally without repetitive preambles - vary your openings based on context\n\t2.\tGet straight to the point while maintaining a warm, professional tone\n\t3.\tWhen relevant, mention source documents naturally (e.g., “According to the Q3 report…” or “The employee handbook notes that…”)\n\t4.\tUse clean formatting (CRITICAL): Format all lists using single-level bullet points only (avoid nesting) and ensure each section is separated by a blank line.\"\n\"Use bold text for headers on their own line to create a clear visual hierarchy instead of using nested symbols.\n\nWhen information isn’t available:\n\t1.\tBe honest and helpful: “I wasn’t able to find that information in our records. Is there something related I can help you with?” or “That’s not covered in the materials I have access to. Would you like me to look into something else?”\n\nFor casual interactions:\n\t1.\tEngage naturally when users are just chatting or greeting you\n\t2.\tBe friendly but don’t overdo it - maintain professionalism\n\t3.\tGuide conversations back to how you can help them find information\n\nBOUNDARIES\n\nYou work exclusively with Princess Osas Limited’s knowledge base:\n\t1.\tNever fabricate details or fill gaps with assumptions\n\t2.\tDon’t rely on general business knowledge or external information\n\t3.\tSkip technical explanations about how you retrieve information\n\t4.\tNever reveal internal reasoning or chain-of-thought.\n\t5.\tIf you’re unsure, say so rather than guessing\n\nTONE GUIDELINES (CRITICAL)\n\t1.\tPersonalize your responses. For example, instead of asking questions like “Why ask about Princess Osas Limited’s company knowledge,” you should speak as an employee of the company. Respond in a way that shows internal awareness—for instance: “Our company operates in three major units,” or “We have three major units.” Act like a team member, not a robot. You work for Princess Osas Limited.\n\t2.\tConfident but humble when information is limited\n\t3.\tClear and direct without being robotic or formulaic\n\t4.\tAdjust your warmth to match the user’s style\n\nKEY IMPROVEMENTS\n\t1.\tRemoved robotic repetition cues - emphasized varying responses naturally\n\t2.\tAdded reasoning step (“Before responding”) to encourage thinking before answering\n\t3.\tMade RAG tool usage implicit in workflow rather than a rigid command\n\t4.\tSoftened tone while maintaining professionalism\n\t5.\tProvided natural phrasing alternatives instead of fixed templates\n\t6.\tKept critical rules but framed them more conversationally"
+        }
+      },
+      "id": "de0e3749-16ea-47b6-b9d1-46b33a84a242",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        16,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {
+          "maxOutputTokens": 2048,
+          "temperature": 0.2
+        }
+      },
+      "id": "859d52c8-7df5-45fb-9432-631ecccaa62e",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        464
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ieAt1Nldw4ak40Vd",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $('Slack Trigger').item.json.channel }}",
+          "mode": "id"
+        },
+        "text": "={{ $json.output }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "f3ba672b-eeac-4c42-98c4-8e8e3c96f1ea",
+      "name": "Send Slack Reply",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        736,
+        432
+      ],
+      "webhookId": "82b64055-9f4e-4e28-a117-15ee0119a9ac",
+      "credentials": {
+        "slackApi": {
+          "id": "3OyTcHGuU9nCHZYu",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        672
+      ],
+      "id": "7b9c6968-dac0-447e-ba55-2ec5d7c57652",
+      "name": "Stop - Bot Message"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Search knowledge base for company information, documents, policies, and business units. Use this tool to find answers to any questions about the company.",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "documentknowledge",
+          "mode": "list",
+          "cachedResultName": "documentknowledge"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        464
+      ],
+      "id": "b530941a-f0aa-4ebd-ad7b-ecd4ab8d7674",
+      "name": "Pinecone Vector Store2",
+      "credentials": {
+        "pineconeApi": {
+          "id": "lGQA1BNc4hxJIive",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-embedding-001"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        208,
+        720
+      ],
+      "id": "0382d566-b9dc-42a0-9051-7cf0b5002ec9",
+      "name": "Embeddings Google Gemini1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ieAt1Nldw4ak40Vd",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eff0bc06-3e79-4c57-8b3d-70c05456f899",
+              "leftValue": "={{ $json.user }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "b69035c1-f223-45cf-a3df-b044f881d565",
+              "leftValue": "={{ $json.bot_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -560,
+        416
+      ],
+      "id": "0e8bdc7c-a2d0-4e29-8704-76ae0b87d2fc",
+      "name": "Ignore Bot"
+    },
+    {
+      "parameters": {
+        "content": "## 📂 Knowledge Base Ingestion (ETL)\nAuto-syncs documentation from Google Drive. This pipeline triggers on new file creation, downloads the content, splits text into manageable chunks (recursive splitting), and generates vector embeddings via Gemini to \"upsert\" into the Pinecone index.\n",
+        "height": 144,
+        "width": 576,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1456,
+        32
+      ],
+      "typeVersion": 1,
+      "id": "33531e4d-3eaf-4cd6-89c3-8e0a5760a49c",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## 👂 Event Listener & Loop Prevention\nMonitors the Slack channel for incoming messages. Crucially, the \"Ignore Bot\" node acts as a logic gate to discard events initiated by the bot itself or other apps, preventing infinite reply loops before passing user queries to the AI.\n",
+        "width": 432,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -752,
+        240
+      ],
+      "typeVersion": 1,
+      "id": "4a4aacf5-6e1f-4467-802d-3e97376479a6",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## 🤖 RAG Agent & Response Logic\nThe core reasoning engine. It utilizes a Window Buffer Memory to maintain conversation context (last 3 interactions) and dynamically calls the Pinecone Vector Store as a tool to retrieve context about the documents before generating and dispatching the final answer.\n",
+        "width": 528
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -128,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "e36f113a-5d10-4b0d-80a5-9d3993481e5e",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.user }}",
+        "contextWindowLength": 3
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        64,
+        464
+      ],
+      "id": "5cc9f14c-96cc-438f-b21c-dc614c839b2f",
+      "name": "Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Download File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download File": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Trigger": {
+      "main": [
+        [
+          {
+            "node": "Ignore Bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store2": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store2",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ignore Bot": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop - Bot Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b18807f5-1115-47a6-8075-01560d766f4c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "14648d4acf1730d1da4c4b7b1675a2d6025b1dea5f7b1d91161fccb4dad58b6a"
+  },
+  "id": "ph9v0Q0Mowv9yhLm",
+  "tags": []
+}
