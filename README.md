@@ -4,7 +4,7 @@
 
 By leveraging **Google Gemini 2.5 Pro** for reasoning and **Pinecone** for vector storage, DocuFetch provides a "human-in-the-loop" feel with institutional memory.
 
-![Process Flow](Demo_&_Screenshots/docufetch-system-architecture.png)
+![Process Flow](Demo_&_Screenshots/docufetch-system-architecture.PNG)
 
 ## 🎥 Demo Video
 
