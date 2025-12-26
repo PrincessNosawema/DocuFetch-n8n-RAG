@@ -182,7 +182,7 @@
     },
     {
       "parameters": {
-        "modelName": "models/gemini-2.5-flash-lite",
+        "modelName": "models/gemini-2.5-pro",
         "options": {
           "maxOutputTokens": 2048,
           "temperature": 0.2
