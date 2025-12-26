@@ -11,7 +11,7 @@ By leveraging **Google Gemini 2.5 Pro** for reasoning and **Pinecone** for vecto
 
 ## 📸 Workflow
 
-![Process Flow](Demo_&_Screenshots/DocuFetch Screenshot.png)
+![Process Flow](Demo_&_Screenshots/DocuFetch_Screenshot.png)
 
 ## 🚀 Key Features
 
