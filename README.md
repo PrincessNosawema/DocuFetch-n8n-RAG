@@ -32,6 +32,7 @@ By leveraging **Google Gemini 2.5 Pro** for reasoning and **Pinecone** for vecto
 | **Embeddings** | Google Gemini Embedding-001 |
 | **Data Sources** | Google Drive API |
 | **Communication** | Slack API |
+| **Language** | JavaScript (Node.js) |
 
 ## 🏗️ Workflow Architecture
 
